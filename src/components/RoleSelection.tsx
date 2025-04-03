@@ -23,6 +23,7 @@ export const RoleSelection = ({ onRoleSelected }: RoleSelectionProps) => {
     if (role === 'instructor') {
       localStorage.setItem('isInstructor', 'true');
       localStorage.removeItem('currentTeam');
+      localStorage.removeItem('teamName');
       toast({
         title: "You are now the instructor",
         description: "You have full control over the game.",
@@ -47,7 +48,7 @@ export const RoleSelection = ({ onRoleSelected }: RoleSelectionProps) => {
   };
 
   useEffect(() => {
-    // Clear any existing localStorage data to prevent conflicts
+    // Check if user already has a role
     const hasExistingRole = localStorage.getItem('isInstructor');
     if (hasExistingRole) {
       // If user already has a role, use it

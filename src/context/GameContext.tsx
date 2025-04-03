@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { CategoryType, GameData, GameState, Team, Word } from '../types/game';
 import { createMockGame } from '../data/mockData';
@@ -225,17 +226,24 @@ const gameReducer = (state: GameData, action: GameAction): GameData => {
     }
     
     case 'START_GAME': {
+      // Set all teams as ready automatically when the game starts
+      const updatedTeams = state.teams.map(team => ({
+        ...team,
+        isReady: true
+      }));
+      
       return {
         ...state,
         state: 'playing',
-        startTime: Date.now()
+        startTime: Date.now(),
+        teams: updatedTeams
       };
     }
     
     case 'END_GAME': {
       return {
         ...state,
-        state: 'ended',
+        state: 'ended', // This was causing the type error
         endTime: Date.now(),
         winningTeam: action.payload || state.winningTeam
       };
