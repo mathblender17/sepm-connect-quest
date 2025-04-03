@@ -30,9 +30,8 @@ export const RoleSelection = ({ onRoleSelected }: RoleSelectionProps) => {
       onRoleSelected();
     } else if (role === 'team' && teamName.trim()) {
       localStorage.setItem('isInstructor', 'false');
-      // In a real app, we would create a new team or join an existing one
-      // For this demo, we'll just use a mock team ID
       localStorage.setItem('currentTeam', '1');
+      localStorage.setItem('teamName', teamName.trim());
       toast({
         title: "You've joined as a team",
         description: `Welcome, ${teamName}!`,
@@ -48,9 +47,10 @@ export const RoleSelection = ({ onRoleSelected }: RoleSelectionProps) => {
   };
 
   useEffect(() => {
-    // Check if the user already has a role
-    const isInstructor = localStorage.getItem('isInstructor');
-    if (isInstructor) {
+    // Clear any existing localStorage data to prevent conflicts
+    const hasExistingRole = localStorage.getItem('isInstructor');
+    if (hasExistingRole) {
+      // If user already has a role, use it
       onRoleSelected();
     }
   }, [onRoleSelected]);
@@ -97,7 +97,11 @@ export const RoleSelection = ({ onRoleSelected }: RoleSelectionProps) => {
           )}
         </CardContent>
         <CardFooter>
-          <Button className="w-full" onClick={handleContinue} disabled={!role || (role === 'team' && !teamName.trim())}>
+          <Button 
+            className="w-full" 
+            onClick={handleContinue} 
+            disabled={!role || (role === 'team' && !teamName.trim())}
+          >
             Continue
           </Button>
         </CardFooter>

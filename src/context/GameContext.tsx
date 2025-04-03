@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { CategoryType, GameData, GameState, Team, Word } from '../types/game';
 import { createMockGame } from '../data/mockData';
@@ -277,8 +276,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const currentTeam = currentTeamId ? gameData.teams.find(team => team.id === currentTeamId) : null;
   const selectedWords = gameData.words.filter(word => word.selected);
   
-  // Set up event listeners for real-time updates
-  // In a real application, this would integrate with Supabase or WebSockets
+  useEffect(() => {
+    console.log("Game state:", gameData.state);
+    console.log("Current team:", currentTeam);
+  }, [gameData.state, currentTeam]);
   
   return (
     <GameContext.Provider
