@@ -22,6 +22,12 @@ export interface GameSettings {
   maxIncorrectAttempts: number;
 }
 
+export interface Player {
+  name: string;
+  score: number;
+  solvedCategories: CategoryType[];
+}
+
 export interface GameData {
   id: string;
   state: GameState;
@@ -34,4 +40,6 @@ export interface GameData {
   startTime: number | null;
   endTime: number | null;
   timeRemaining: number | null;
+  players: Player[];
+  currentPlayer: string | null;
 }

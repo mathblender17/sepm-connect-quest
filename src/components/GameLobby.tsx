@@ -1,9 +1,21 @@
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useGame } from "@/context/GameContext";
+import { useState } from "react";
+import { Leaderboard } from "./Leaderboard";
 
 export const GameLobby = () => {
-  const { dispatch } = useGame();
+  const { dispatch, currentPlayer } = useGame();
+  const [playerName, setPlayerName] = useState(currentPlayer || "");
+
+  const handleStartGame = () => {
+    if (playerName.trim()) {
+      dispatch({ type: "SET_PLAYER_NAME", payload: playerName.trim() });
+      dispatch({ type: "START_GAME" });
+    }
+  };
 
   return (
     <div className="w-full max-w-lg mx-auto py-8 px-4">
@@ -24,13 +36,28 @@ export const GameLobby = () => {
         </ul>
       </div>
       
-      <div className="text-center">
+      <div className="space-y-6">
+        <div className="space-y-3">
+          <Label htmlFor="player-name">Your Name</Label>
+          <Input 
+            id="player-name" 
+            placeholder="Enter your name" 
+            value={playerName}
+            onChange={(e) => setPlayerName(e.target.value)}
+          />
+        </div>
+        
         <Button 
-          onClick={() => dispatch({ type: "START_GAME" })}
+          onClick={handleStartGame}
           className="w-full"
+          disabled={!playerName.trim()}
         >
           Start Game
         </Button>
+      </div>
+      
+      <div className="mt-8">
+        <Leaderboard />
       </div>
     </div>
   );

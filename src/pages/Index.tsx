@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GameProvider, useGame } from "@/context/GameContext";
 import { Header } from "@/components/Header";
 import { GameBoard } from "@/components/GameBoard";
@@ -12,7 +12,7 @@ const GameContent = () => {
   const [showConfetti, setShowConfetti] = useState(false);
   
   // Show confetti when the player wins
-  useState(() => {
+  useEffect(() => {
     if (gameData.state === 'ended' && gameData.solvedCategories.length === 4) {
       setShowConfetti(true);
       
@@ -23,7 +23,7 @@ const GameContent = () => {
       
       return () => clearTimeout(timer);
     }
-  });
+  }, [gameData.state, gameData.solvedCategories.length]);
 
   return (
     <div className="min-h-screen flex flex-col">

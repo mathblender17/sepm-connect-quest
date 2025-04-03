@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { CategoryType, GameData, GameState, Team, Word } from '../types/game';
+import { CategoryType, GameData, GameState, Word, Player } from '../types/game';
 import { createMockGame } from '../data/mockData';
 import { toast } from '@/components/ui/use-toast';
 
@@ -8,6 +8,8 @@ interface GameContextType {
   gameData: GameData;
   selectedWords: Word[];
   timeRemaining: number | null;
+  currentPlayer: string | null;
+  players: Player[];
   dispatch: React.Dispatch<GameAction>;
 }
 
@@ -20,17 +22,50 @@ type GameAction =
   | { type: 'END_GAME'; payload?: string }
   | { type: 'SHOW_ANSWERS' }
   | { type: 'RESET_GAME' }
-  | { type: 'TICK_TIMER' };
+  | { type: 'TICK_TIMER' }
+  | { type: 'SET_PLAYER_NAME'; payload: string };
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 // Game timer constants
 const GAME_DURATION = 270; // 4:30 in seconds (270 seconds)
 
+const initialGame = (): GameData => {
+  const baseGame = createMockGame();
+  return {
+    ...baseGame,
+    players: [],
+    currentPlayer: null
+  };
+};
+
 const gameReducer = (state: GameData, action: GameAction): GameData => {
   switch (action.type) {
     case 'SET_GAME_STATE': {
       return { ...state, state: action.payload };
+    }
+    
+    case 'SET_PLAYER_NAME': {
+      const playerName = action.payload;
+      // Check if player already exists
+      const existingPlayerIndex = state.players.findIndex(p => p.name === playerName);
+      
+      let updatedPlayers = [...state.players];
+      
+      if (existingPlayerIndex === -1) {
+        // Add new player
+        updatedPlayers.push({
+          name: playerName,
+          score: 0,
+          solvedCategories: []
+        });
+      }
+      
+      return {
+        ...state,
+        currentPlayer: playerName,
+        players: updatedPlayers
+      };
     }
     
     case 'TOGGLE_WORD_SELECTION': {
@@ -114,6 +149,21 @@ const gameReducer = (state: GameData, action: GameAction): GameData => {
         const updatedScore = state.score + 1;
         const updatedSolvedCategories = [...state.solvedCategories, category];
         
+        // Update player score
+        let updatedPlayers = [...state.players];
+        if (state.currentPlayer) {
+          updatedPlayers = updatedPlayers.map(player => {
+            if (player.name === state.currentPlayer) {
+              return {
+                ...player,
+                score: player.score + 1,
+                solvedCategories: [...player.solvedCategories, category]
+              };
+            }
+            return player;
+          });
+        }
+        
         // Check if all categories are solved (game won)
         let gameState = state.state;
         let endTime = state.endTime;
@@ -139,7 +189,8 @@ const gameReducer = (state: GameData, action: GameAction): GameData => {
           score: updatedScore,
           solvedCategories: updatedSolvedCategories,
           state: gameState,
-          endTime
+          endTime,
+          players: updatedPlayers
         };
       } else {
         // Incorrect submission
@@ -196,6 +247,16 @@ const gameReducer = (state: GameData, action: GameAction): GameData => {
     }
     
     case 'START_GAME': {
+      // Don't start if no player name is set
+      if (!state.currentPlayer) {
+        toast({
+          title: "Player Name Required",
+          description: "Please enter your name before starting the game.",
+          variant: "destructive"
+        });
+        return state;
+      }
+      
       return {
         ...state,
         state: 'playing',
@@ -254,7 +315,16 @@ const gameReducer = (state: GameData, action: GameAction): GameData => {
     }
     
     case 'RESET_GAME': {
-      return createMockGame();
+      // Preserve players when resetting
+      const players = state.players;
+      const currentPlayer = state.currentPlayer;
+      
+      const newGame = createMockGame();
+      return {
+        ...newGame,
+        players,
+        currentPlayer
+      };
     }
     
     default:
@@ -263,9 +333,11 @@ const gameReducer = (state: GameData, action: GameAction): GameData => {
 };
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [gameData, dispatch] = useReducer(gameReducer, createMockGame());
+  const [gameData, dispatch] = useReducer(gameReducer, null, initialGame);
   const selectedWords = gameData.words.filter(word => word.selected);
   const timeRemaining = gameData.timeRemaining;
+  const currentPlayer = gameData.currentPlayer;
+  const players = gameData.players;
   
   // Setup game timer
   useEffect(() => {
@@ -290,6 +362,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         gameData,
         selectedWords,
         timeRemaining,
+        currentPlayer,
+        players,
         dispatch
       }}
     >
