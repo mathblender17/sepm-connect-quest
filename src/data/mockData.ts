@@ -1,10 +1,6 @@
 
 import { CategoryType, GameData } from "../types/game";
 
-const generateGameCode = (): string => {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
-};
-
 export const mockCategories = [
   {
     type: 'yellow' as CategoryType,
@@ -58,53 +54,23 @@ export const mockWords = [
   { id: '16', text: 'Personas', category: 'purple' as CategoryType, selected: false, solved: false }
 ];
 
-export const mockTeams = [
-  {
-    id: '1',
-    name: 'Team Alpha',
-    isReady: true,
-    score: 0,
-    incorrectAttempts: 0,
-    solvedCategories: [] as CategoryType[],
-    isLocked: false
-  },
-  {
-    id: '2',
-    name: 'Team Beta',
-    isReady: true,
-    score: 0,
-    incorrectAttempts: 0,
-    solvedCategories: [] as CategoryType[],
-    isLocked: false
-  },
-  {
-    id: '3',
-    name: 'Team Gamma',
-    isReady: false,
-    score: 0,
-    incorrectAttempts: 0,
-    solvedCategories: [] as CategoryType[],
-    isLocked: false
-  }
-];
-
 export const createMockGame = (): GameData => {
   // Shuffle the words
   const shuffledWords = [...mockWords].sort(() => Math.random() - 0.5);
   
   return {
     id: '1',
-    code: generateGameCode(),
     state: 'lobby',
-    instructor: 'Instructor',
-    teams: mockTeams,
     words: shuffledWords,
     categories: mockCategories,
+    score: 0,
+    incorrectAttempts: 0,
+    solvedCategories: [],
     settings: {
       maxIncorrectAttempts: 4
     },
-    winningTeam: null,
     startTime: null,
-    endTime: null
+    endTime: null,
+    timeRemaining: null
   };
 };

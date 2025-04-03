@@ -6,25 +6,26 @@ import { toast } from '@/components/ui/use-toast';
 
 interface GameContextType {
   gameData: GameData;
-  isInstructor: boolean;
-  currentTeam: Team | null;
   selectedWords: Word[];
+  timeRemaining: number | null;
   dispatch: React.Dispatch<GameAction>;
 }
 
 type GameAction =
   | { type: 'SET_GAME_STATE'; payload: GameState }
-  | { type: 'SET_CURRENT_TEAM'; payload: string }
   | { type: 'TOGGLE_WORD_SELECTION'; payload: string }
   | { type: 'SUBMIT_SELECTION' }
   | { type: 'CLEAR_SELECTION' }
-  | { type: 'SET_TEAM_READY'; payload: { teamId: string; isReady: boolean } }
   | { type: 'START_GAME' }
   | { type: 'END_GAME'; payload?: string }
   | { type: 'SHOW_ANSWERS' }
-  | { type: 'RESET_GAME' };
+  | { type: 'RESET_GAME' }
+  | { type: 'TICK_TIMER' };
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
+
+// Game timer constants
+const GAME_DURATION = 270; // 4:30 in seconds (270 seconds)
 
 const gameReducer = (state: GameData, action: GameAction): GameData => {
   switch (action.type) {
@@ -34,17 +35,14 @@ const gameReducer = (state: GameData, action: GameAction): GameData => {
     
     case 'TOGGLE_WORD_SELECTION': {
       const wordId = action.payload;
-      const currentTeamId = localStorage.getItem('currentTeam');
       
-      // If no team is selected or the game is not in progress, do nothing
-      if (!currentTeamId || state.state !== 'playing') {
+      // If the game is not in progress, do nothing
+      if (state.state !== 'playing') {
         return state;
       }
       
-      const team = state.teams.find(t => t.id === currentTeamId);
-      
-      // If team is locked out from too many incorrect attempts, do nothing
-      if (!team || team.isLocked) {
+      // If the player is locked out from too many incorrect attempts, do nothing
+      if (state.incorrectAttempts >= state.settings.maxIncorrectAttempts) {
         return state;
       }
       
@@ -65,17 +63,13 @@ const gameReducer = (state: GameData, action: GameAction): GameData => {
     }
     
     case 'SUBMIT_SELECTION': {
-      const currentTeamId = localStorage.getItem('currentTeam');
-      
-      // If no team is selected or the game is not in progress, do nothing
-      if (!currentTeamId || state.state !== 'playing') {
+      // If the game is not in progress, do nothing
+      if (state.state !== 'playing') {
         return state;
       }
       
-      const team = state.teams.find(t => t.id === currentTeamId);
-      
-      // If team is locked out, do nothing
-      if (!team || team.isLocked) {
+      // If player is locked out, do nothing
+      if (state.incorrectAttempts >= state.settings.maxIncorrectAttempts) {
         return state;
       }
       
@@ -116,37 +110,25 @@ const gameReducer = (state: GameData, action: GameAction): GameData => {
           return cat;
         });
         
-        // Update the team's score and solved categories
-        const updatedTeams = state.teams.map(t => {
-          if (t.id === currentTeamId) {
-            const updatedSolvedCategories = [...t.solvedCategories, category];
-            return {
-              ...t,
-              score: t.score + 1,
-              solvedCategories: updatedSolvedCategories
-            };
-          }
-          return t;
-        });
+        // Update the score
+        const updatedScore = state.score + 1;
+        const updatedSolvedCategories = [...state.solvedCategories, category];
         
-        // Check if the team has won (solved all categories)
-        const updatedTeam = updatedTeams.find(t => t.id === currentTeamId);
-        let winningTeam = state.winningTeam;
+        // Check if all categories are solved (game won)
         let gameState = state.state;
         let endTime = state.endTime;
         
-        if (updatedTeam && updatedTeam.solvedCategories.length === 4 && !state.winningTeam) {
-          winningTeam = currentTeamId;
+        if (updatedSolvedCategories.length === 4) {
           gameState = 'ended';
           endTime = Date.now();
           toast({
-            title: "Game Over!",
-            description: `${updatedTeam.name} has won the game!`,
+            title: "You Win!",
+            description: "Congratulations! You've found all categories!",
           });
         } else {
           toast({
             title: "Correct!",
-            description: `You've found the ${categories[0]} category!`,
+            description: `You've found the ${updatedCategories.find(c => c.type === category)?.name} category!`,
           });
         }
         
@@ -154,8 +136,8 @@ const gameReducer = (state: GameData, action: GameAction): GameData => {
           ...state,
           words: updatedWords,
           categories: updatedCategories,
-          teams: updatedTeams,
-          winningTeam,
+          score: updatedScore,
+          solvedCategories: updatedSolvedCategories,
           state: gameState,
           endTime
         };
@@ -169,36 +151,36 @@ const gameReducer = (state: GameData, action: GameAction): GameData => {
           return word;
         });
         
-        // Increment the team's incorrect attempts
-        const updatedTeams = state.teams.map(t => {
-          if (t.id === currentTeamId) {
-            const newIncorrectAttempts = t.incorrectAttempts + 1;
-            const isLocked = newIncorrectAttempts >= state.settings.maxIncorrectAttempts;
-            
-            if (isLocked) {
-              toast({
-                title: "You've been locked out!",
-                description: "Too many incorrect attempts.",
-                variant: "destructive"
-              });
-            } else {
-              toast({
-                title: "Incorrect!",
-                description: `Try again! ${state.settings.maxIncorrectAttempts - newIncorrectAttempts} attempts remaining.`,
-                variant: "destructive"
-              });
-            }
-            
-            return {
-              ...t,
-              incorrectAttempts: newIncorrectAttempts,
-              isLocked
-            };
-          }
-          return t;
-        });
+        // Increment incorrect attempts
+        const newIncorrectAttempts = state.incorrectAttempts + 1;
+        const isLocked = newIncorrectAttempts >= state.settings.maxIncorrectAttempts;
         
-        return { ...state, words: updatedWords, teams: updatedTeams };
+        let gameState = state.state;
+        let endTime = state.endTime;
+        
+        if (isLocked) {
+          gameState = 'ended';
+          endTime = Date.now();
+          toast({
+            title: "Game Over!",
+            description: "Too many incorrect attempts.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Incorrect!",
+            description: `Try again! ${state.settings.maxIncorrectAttempts - newIncorrectAttempts} attempts remaining.`,
+            variant: "destructive"
+          });
+        }
+        
+        return { 
+          ...state, 
+          words: updatedWords, 
+          incorrectAttempts: newIncorrectAttempts,
+          state: gameState,
+          endTime
+        };
       }
     }
     
@@ -213,39 +195,43 @@ const gameReducer = (state: GameData, action: GameAction): GameData => {
       return { ...state, words: updatedWords };
     }
     
-    case 'SET_TEAM_READY': {
-      const { teamId, isReady } = action.payload;
-      const updatedTeams = state.teams.map(team => {
-        if (team.id === teamId) {
-          return { ...team, isReady };
-        }
-        return team;
-      });
-      
-      return { ...state, teams: updatedTeams };
-    }
-    
     case 'START_GAME': {
-      // Set all teams as ready automatically when the game starts
-      const updatedTeams = state.teams.map(team => ({
-        ...team,
-        isReady: true
-      }));
-      
       return {
         ...state,
         state: 'playing',
         startTime: Date.now(),
-        teams: updatedTeams
+        timeRemaining: GAME_DURATION
       };
     }
     
     case 'END_GAME': {
       return {
         ...state,
-        state: 'ended', // This was causing the type error
-        endTime: Date.now(),
-        winningTeam: action.payload || state.winningTeam
+        state: 'ended',
+        endTime: Date.now()
+      };
+    }
+    
+    case 'TICK_TIMER': {
+      if (state.state !== 'playing' || state.timeRemaining === null) {
+        return state;
+      }
+      
+      const newTimeRemaining = Math.max(0, state.timeRemaining - 1);
+      
+      // If timer reaches 0, end the game
+      if (newTimeRemaining === 0) {
+        return {
+          ...state,
+          timeRemaining: 0,
+          state: 'ended',
+          endTime: Date.now()
+        };
+      }
+      
+      return {
+        ...state,
+        timeRemaining: newTimeRemaining
       };
     }
     
@@ -278,24 +264,32 @@ const gameReducer = (state: GameData, action: GameAction): GameData => {
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [gameData, dispatch] = useReducer(gameReducer, createMockGame());
-  
-  const isInstructor = localStorage.getItem('isInstructor') === 'true';
-  const currentTeamId = localStorage.getItem('currentTeam');
-  const currentTeam = currentTeamId ? gameData.teams.find(team => team.id === currentTeamId) : null;
   const selectedWords = gameData.words.filter(word => word.selected);
+  const timeRemaining = gameData.timeRemaining;
   
+  // Setup game timer
   useEffect(() => {
-    console.log("Game state:", gameData.state);
-    console.log("Current team:", currentTeam);
-  }, [gameData.state, currentTeam]);
+    let timerInterval: number | undefined;
+    
+    if (gameData.state === 'playing' && gameData.timeRemaining !== null && gameData.timeRemaining > 0) {
+      timerInterval = window.setInterval(() => {
+        dispatch({ type: 'TICK_TIMER' });
+      }, 1000);
+    }
+    
+    return () => {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+      }
+    };
+  }, [gameData.state, gameData.timeRemaining]);
   
   return (
     <GameContext.Provider
       value={{
         gameData,
-        isInstructor,
-        currentTeam,
         selectedWords,
+        timeRemaining,
         dispatch
       }}
     >

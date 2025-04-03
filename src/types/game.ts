@@ -18,30 +18,20 @@ export interface Category {
   solved: boolean;
 }
 
-export interface Team {
-  id: string;
-  name: string;
-  isReady: boolean;
-  score: number;
-  incorrectAttempts: number;
-  solvedCategories: CategoryType[];
-  isLocked: boolean;
-}
-
 export interface GameSettings {
   maxIncorrectAttempts: number;
 }
 
 export interface GameData {
   id: string;
-  code: string;
   state: GameState;
-  instructor: string;
-  teams: Team[];
   words: Word[];
   categories: Category[];
+  score: number;
+  incorrectAttempts: number;
+  solvedCategories: CategoryType[];
   settings: GameSettings;
-  winningTeam: string | null;
   startTime: number | null;
   endTime: number | null;
+  timeRemaining: number | null;
 }

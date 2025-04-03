@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { useGame } from "@/context/GameContext";
 import { cn } from "@/lib/utils";
 import { Check, X } from "lucide-react";
+import { Timer } from "./Timer";
 
 export const GameBoard = () => {
-  const { gameData, currentTeam, selectedWords, dispatch } = useGame();
+  const { gameData, selectedWords, dispatch } = useGame();
 
   const handleWordClick = (wordId: string) => {
     dispatch({ type: "TOGGLE_WORD_SELECTION", payload: wordId });
@@ -19,17 +20,34 @@ export const GameBoard = () => {
     dispatch({ type: "CLEAR_SELECTION" });
   };
 
-  // Flag to determine if the current team can interact with the board
+  // Flag to determine if the player can interact with the board
   const canInteract = 
     gameData.state === "playing" && 
-    currentTeam && 
-    !currentTeam.isLocked;
+    gameData.incorrectAttempts < gameData.settings.maxIncorrectAttempts;
 
   // Flag to disable submit button
   const canSubmit = selectedWords.length === 4 && canInteract;
 
   return (
-    <div className="w-full max-w-4xl mx-auto py-8">
+    <div className="w-full max-w-4xl mx-auto py-4">
+      {/* Timer */}
+      <div className="text-center mb-4">
+        <Timer />
+      </div>
+      
+      {/* Game status */}
+      <div className="mb-4 flex justify-between items-center">
+        <div className="text-sm">
+          <span className="font-semibold">Solved: </span>
+          <span>{gameData.score}/4</span>
+        </div>
+        <div className="text-sm">
+          <span className="font-semibold">Attempts: </span>
+          <span>{gameData.incorrectAttempts}/{gameData.settings.maxIncorrectAttempts}</span>
+        </div>
+      </div>
+      
+      {/* Game grid */}
       <div className="grid grid-cols-4 gap-4">
         {gameData.words.map((word) => (
           <div
@@ -52,7 +70,8 @@ export const GameBoard = () => {
         ))}
       </div>
 
-      {gameData.state === "playing" && currentTeam && (
+      {/* Action buttons */}
+      {gameData.state === "playing" && (
         <div className="mt-6 flex justify-center space-x-4">
           {selectedWords.length > 0 && (
             <Button
@@ -76,9 +95,10 @@ export const GameBoard = () => {
         </div>
       )}
 
-      {currentTeam?.isLocked && (
+      {/* Game over message */}
+      {gameData.incorrectAttempts >= gameData.settings.maxIncorrectAttempts && (
         <div className="mt-6 p-4 bg-gameRed/10 border border-gameRed rounded-lg text-center">
-          <h3 className="text-lg font-medium text-gameRed">Your team is locked out!</h3>
+          <h3 className="text-lg font-medium text-gameRed">Game Over!</h3>
           <p>You've reached the maximum number of incorrect attempts.</p>
         </div>
       )}

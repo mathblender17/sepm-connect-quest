@@ -10,11 +10,7 @@ import {
 import { ChevronDown, Info } from "lucide-react";
 
 export const Header = () => {
-  const { gameData, isInstructor, dispatch } = useGame();
-
-  const handleStartGame = () => {
-    dispatch({ type: "START_GAME" });
-  };
+  const { gameData, dispatch } = useGame();
 
   const handleEndGame = () => {
     dispatch({ type: "END_GAME" });
@@ -28,35 +24,20 @@ export const Header = () => {
     dispatch({ type: "RESET_GAME" });
   };
 
-  const allTeamsReady = gameData.teams.every((team) => team.isReady);
-
   return (
     <header className="w-full py-4 flex justify-between items-center border-b">
       <div className="flex items-center">
         <h1 className="text-2xl font-bold text-primary mr-2">SEPM Connections</h1>
-        <span className="text-sm px-2 py-0.5 bg-muted rounded">
-          Game Code: {gameData.code}
-        </span>
       </div>
 
       <div className="flex items-center space-x-2">
-        {isInstructor && gameData.state === "lobby" && (
-          <Button
-            onClick={handleStartGame}
-            disabled={!allTeamsReady}
-            className="animate-pulse-subtle"
-          >
-            Start Game
-          </Button>
-        )}
-
-        {isInstructor && gameData.state === "playing" && (
-          <Button variant="destructive" onClick={handleEndGame}>
+        {gameData.state === "playing" && (
+          <Button variant="outline" onClick={handleEndGame}>
             End Game
           </Button>
         )}
 
-        {isInstructor && gameData.state === "ended" && (
+        {gameData.state === "ended" && (
           <Button onClick={handleResetGame}>New Game</Button>
         )}
 
@@ -67,7 +48,7 @@ export const Header = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {isInstructor && (
+            {gameData.state === "ended" && (
               <DropdownMenuItem onClick={handleShowAnswers}>
                 Show Answers
               </DropdownMenuItem>
